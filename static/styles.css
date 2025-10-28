@@ -1,0 +1,140 @@
+/* style.css */
+
+/* Variables for easy color changes */
+:root {
+    --bg-color: #1a1a2e; /* Deep Dark Blue */
+    --card-color: #0f1925; /* Slightly lighter dark for contrast */
+    --accent-color: #00bcd4; /* Bright Cyan - the primary action color */
+    --status-color: #ff9800; /* Orange for status messages */
+    --text-color: #f0f0f0;
+    --font: 'Roboto', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    width: 90%;
+    max-width: 500px; /* Optimal width for a focused form */
+    text-align: center;
+}
+
+/* Titles */
+.title {
+    color: var(--accent-color);
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+.subtitle {
+    color: #a4a4cc;
+    margin-bottom: 30px;
+}
+
+/* Card - The main container for the form */
+.card {
+    background-color: var(--card-color);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); 
+    margin-bottom: 30px;
+    border-top: 3px solid var(--accent-color); /* The flair line */
+}
+
+/* Form Grouping and Labels */
+.input-group {
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 400;
+    color: var(--text-color);
+}
+
+/* Styling for all input types and the new select field */
+input[type="text"],
+input[type="number"],
+.select-field { 
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #3c4257;
+    border-radius: 6px;
+    background-color: #272a39; /* Input background */
+    color: var(--text-color);
+    box-sizing: border-box; 
+    font-size: 16px;
+    transition: border-color 0.3s;
+    /* Custom styling to hide native select arrow and use a custom one */
+    appearance: none; 
+    -webkit-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="%23f0f0f0" d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+input:focus,
+.select-field:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 5px rgba(0, 188, 212, 0.5); /* Accent glow on focus */
+}
+
+/* Primary Button */
+.button-primary {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.button-primary:hover {
+    background-color: #0097a7; /* Darker cyan on hover */
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 10px rgba(0, 188, 212, 0.4);
+}
+
+/* Log Area for Status */
+.log-area {
+    text-align: left;
+    padding: 20px;
+    background-color: var(--card-color);
+    border-radius: 8px;
+    border-left: 5px solid var(--status-color); 
+}
+.log-area h2 {
+    font-size: 16px;
+    color: var(--status-color);
+    margin-top: 0;
+}
+.log-area p {
+    font-size: 14px;
+    color: #a4a4cc;
+    margin: 5px 0;
+}
+.log-area code.filepath {
+    background-color: #272a39;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #ffeb3b; /* Yellow color for the path */
+    font-size: 12px;
+}

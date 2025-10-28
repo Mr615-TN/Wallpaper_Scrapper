@@ -1,103 +1,76 @@
-from flask import Flask, request, send_file, render_template_string
-import zipfile
+# app.py
+
+from flask import Flask, render_template, request
+# Import the renamed file and class as requested
+from AgnosticWallpaperScrapper import WallpaperDownloader 
 import os
-import shutil
-from AgnosticWallpaperScrapper import WallpaperDownloader
 
 app = Flask(__name__)
+# Define the default output folder
+OUTPUT_DIR = "AgnosticWallpapers" 
 
-HTML_TEMPLATE = """
-<!doctype html>
-<title>Agnostic Wallpaper Downloader</title>
-<h1 style="text-align:center;">Agnostic Wallpaper Scraper & Downloader</h1>
-<div style="text-align:center; padding-top: 20px;">
+@app.route('/', methods=['GET'])
+def index():
+    """Renders the initial, stylish download form."""
+    # Set defaults for the form
+    return render_template('download_page.html', 
+                           status_message="Ready to begin...", 
+                           current_query="AE86", 
+                           current_source="Reddit")
+
+@app.route('/download', methods=['POST'])
+def download():
+    """Handles the form submission and runs the WallpaperScrapper method."""
     
-    <form method="POST" action="/" style="display: inline-block;">
-        <label for="query" style="font-size: 18px; display: block; margin-bottom: 10px;">
-            Enter Wallpaper Topic (e.g., 'Cyberpunk City', 'Mountain Landscape'):
-        </label>
-        <input type="text" id="query" name="query" required 
-               placeholder="Enter your topic here..."
-               style="padding: 10px; font-size: 16px; width: 300px; border: 1px solid #ccc; border-radius: 4px;">
-        <button type="submit" 
-                style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #3498db; color: #fff; border: none; border-radius: 4px; margin-left: 10px;">
-            Scrape & Download ZIP
-        </button>
-    </form>
+    # 1. Get user input from the form
+    query = request.form.get('query', 'AE86')
+    source = request.form.get('source', 'Reddit') 
+    try:
+        count = int(request.form.get('count', 10))
+    except ValueError:
+        count = 10 
 
-    <p style="margin-top: 20px;">
-        ⚠️ **IMPORTANT:** Scraping and zipping may take **1-2 minutes** before the download starts.
-    </p>
-</div>
-"""
-# ----------------------------------------
+    # 2. Initialize the Scrapper
+    scrapper = WallpaperDownloader(output_folder=OUTPUT_DIR)
+    downloaded_count = 0
+    status_msg = ""
+    
+    # 3. Call the appropriate method based on the selected source
+    try:
+        if source == 'Reddit':
+            downloaded_count = scrapper.search_reddit(query, limit=count)
+        elif source == 'Unsplash':
+            downloaded_count = scrapper.search_unsplash(query, limit=count)
+        elif source == 'Pixabay':
+            # --- NOTE: You MUST pass your actual API key here if needed ---
+            status_msg = f"⚠ Download from **{source}** requires a valid API Key."
+            
+        elif source == 'Pexels':
+            # --- NOTE: You MUST pass your actual API key here if needed ---
+            status_msg = f"⚠ Download from **{source}** requires a valid API Key."
+        else:
+            status_msg = f"⚠ Source **{source}** is not a valid option."
 
-@app.route('/', methods=['GET', 'POST'])
-def index_or_download():
-    # 1. Handle the GET request (Show the form)
-    if request.method == 'GET':
-        return render_template_string(HTML_TEMPLATE)
+        # If a specific status message wasn't set (e.g., API key warning)
+        if not status_msg:
+            if downloaded_count > 0:
+                status_msg = f"✅ Success! **{downloaded_count} images** saved from **{source}**."
+            else:
+                 status_msg = f"⚠️ Downloaded 0 images from **{source}**. Try a new query."
 
-    # 2. Handle the POST request (Process the form and trigger download)
-    if request.method == 'POST':
-        # Get the user's input from the form field named 'query'
-        user_query = request.form.get('query')
+    except Exception as e:
+        status_msg = f"❌ Error during download from {source}: {str(e)}"
         
-        if not user_query:
-            return "Error: No wallpaper topic provided.", 400
+    # 4. Re-render the page with the updated status
+    return render_template(
+        'download_page.html',
+        status_message=status_msg,
+        output_folder=scrapper.get_output_path(),
+        current_query=query,
+        current_count=count,
+        current_source=source
+    )
 
-        # Configuration & Cleanup
-        # Use the query to create a unique and relevant folder/zip name
-        safe_query = user_query.replace(' ', '_').replace('/', '').strip()
-        TEMP_FOLDER = "temp_" + safe_query
-        ZIP_FILENAME = safe_query + "_Wallpapers.zip"
-        
-        if os.path.exists(TEMP_FOLDER):
-            shutil.rmtree(TEMP_FOLDER)
-
-        try:
-            # Run the Scraper
-            downloader = WallpaperDownloader(output_folder=TEMP_FOLDER) 
-            
-            # Scrape from the two best public sources using the user's query
-            downloader.download_from_reddit('wallpaper', user_query, limit=20) 
-            downloader.download_from_reddit('Animewallpaper', user_query, limit=20) 
-
-            if downloader.downloaded_count == 0:
-                # IMPORTANT: Clean up the temp folder on failure
-                if os.path.exists(TEMP_FOLDER):
-                    shutil.rmtree(TEMP_FOLDER)
-                return f"Sorry, no images were found for '{user_query}'. Try a different topic.", 404
-
-            # Create the ZIP File on the server's disk
-            with zipfile.ZipFile(ZIP_FILENAME, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for root, _, files in os.walk(TEMP_FOLDER):
-                    for file in files:
-                        file_path = os.path.join(root, file)
-                        # Add the file to the zip, naming it just by the file name
-                        zipf.write(file_path, arcname=file)
-
-            # Serve the ZIP file for download
-            response = send_file(
-                ZIP_FILENAME, 
-                mimetype='application/zip', 
-                as_attachment=True, 
-                download_name=ZIP_FILENAME
-            )
-            
-            return response
-            
-        except Exception as e:
-            # Handle unexpected errors and ensure cleanup
-            return f"An error occurred during scraping or zipping: {e}", 500
-            
-        finally:
-            # Ensure cleanup runs after the response has been sent
-            if os.path.exists(TEMP_FOLDER):
-                shutil.rmtree(TEMP_FOLDER)
-            if os.path.exists(ZIP_FILENAME):
-                os.remove(ZIP_FILENAME)
-                
-# Standard entry point for local testing
 if __name__ == '__main__':
+    # Run the server: Navigate to http://127.0.0.1:5000
     app.run(debug=True)
