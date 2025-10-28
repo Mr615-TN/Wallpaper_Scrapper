@@ -1,86 +1,103 @@
-# app.py (Minimal Flask example - Wallhaven, Reddit, Unsplash)
-from flask import Flask, request, render_template_string, send_file
+from flask import Flask, request, send_file, render_template_string
+import zipfile
 import os
 import shutil
-import time
-
-# Ensure you save the code from section 1 as Agnostic_Scraper_Wallhaven.py
-from AgnosticWallpaperScrapper import WallpaperDownloader 
+from AgnosticWallpaperScrapper import WallpaperDownloader
 
 app = Flask(__name__)
 
-# --- Core Web App Logic ---
-def run_scraper_and_zip(query):
-    """Initializes the scraper and zips the results using free sources."""
+HTML_TEMPLATE = """
+<!doctype html>
+<title>Agnostic Wallpaper Downloader</title>
+<h1 style="text-align:center;">Agnostic Wallpaper Scraper & Downloader</h1>
+<div style="text-align:center; padding-top: 20px;">
     
-    downloader = WallpaperDownloader(query)
-    
-    # Run all free scraping methods
-    downloader.search_wallhaven(pages=1) # Wallhaven is now included
-    downloader.download_from_reddit('wallpaper', limit=15)
-    downloader.search_unsplash(per_page=3)
-    
-    if downloader.downloaded_count > 0:
-        # Create a ZIP file of the downloaded folder
-        zip_filename = f"{downloader.output_folder}"
-        shutil.make_archive(zip_filename, 'zip', downloader.output_folder)
-        
-        # Clean up the folder after zipping
-        shutil.rmtree(downloader.output_folder)
-        
-        return f"{zip_filename}.zip"
-    else:
-        return None
+    <form method="POST" action="/" style="display: inline-block;">
+        <label for="query" style="font-size: 18px; display: block; margin-bottom: 10px;">
+            Enter Wallpaper Topic (e.g., 'Cyberpunk City', 'Mountain Landscape'):
+        </label>
+        <input type="text" id="query" name="query" required 
+               placeholder="Enter your topic here..."
+               style="padding: 10px; font-size: 16px; width: 300px; border: 1px solid #ccc; border-radius: 4px;">
+        <button type="submit" 
+                style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #3498db; color: #fff; border: none; border-radius: 4px; margin-left: 10px;">
+            Scrape & Download ZIP
+        </button>
+    </form>
 
+    <p style="margin-top: 20px;">
+        ⚠️ **IMPORTANT:** Scraping and zipping may take **1-2 minutes** before the download starts.
+    </p>
+</div>
+"""
+# ----------------------------------------
 
 @app.route('/', methods=['GET', 'POST'])
-def index():
+def index_or_download():
+    # 1. Handle the GET request (Show the form)
+    if request.method == 'GET':
+        return render_template_string(HTML_TEMPLATE)
+
+    # 2. Handle the POST request (Process the form and trigger download)
     if request.method == 'POST':
-        query = request.form.get('query')
-        if not query:
-            return render_template_string(HTML_FORM, message="Please enter a search query.")
-
-        # Simulate processing time for better user experience
-        time.sleep(1) 
+        # Get the user's input from the form field named 'query'
+        user_query = request.form.get('query')
         
-        zip_path = run_scraper_and_zip(query)
+        if not user_query:
+            return "Error: No wallpaper topic provided.", 400
 
-        if zip_path:
-            # Send the generated ZIP file for download
-            return send_file(zip_path, as_attachment=True, download_name=os.path.basename(zip_path))
-        else:
-            return render_template_string(HTML_FORM, message=f"No high-quality images found for '{query}'. Please try a different search term.")
+        # Configuration & Cleanup
+        # Use the query to create a unique and relevant folder/zip name
+        safe_query = user_query.replace(' ', '_').replace('/', '').strip()
+        TEMP_FOLDER = "temp_" + safe_query
+        ZIP_FILENAME = safe_query + "_Wallpapers.zip"
+        
+        if os.path.exists(TEMP_FOLDER):
+            shutil.rmtree(TEMP_FOLDER)
 
-    return render_template_string(HTML_FORM, message="")
+        try:
+            # Run the Scraper
+            downloader = WallpaperDownloader(output_folder=TEMP_FOLDER) 
+            
+            # Scrape from the two best public sources using the user's query
+            downloader.download_from_reddit('wallpaper', user_query, limit=20) 
+            downloader.download_from_reddit('Animewallpaper', user_query, limit=20) 
 
+            if downloader.downloaded_count == 0:
+                # IMPORTANT: Clean up the temp folder on failure
+                if os.path.exists(TEMP_FOLDER):
+                    shutil.rmtree(TEMP_FOLDER)
+                return f"Sorry, no images were found for '{user_query}'. Try a different topic.", 404
 
-# --- HTML Template ---
-HTML_FORM = """
-<!doctype html>
-<title>Agnostic Wallpaper Scraper</title>
-<style>
-    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #f4f4f9; }
-    h1 { color: #333; text-align: center; }
-    form { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    input[type="text"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    input[type="submit"] { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
-    input[type="submit"]:hover { background-color: #0056b3; }
-    .message { text-align: center; margin-top: 20px; padding: 10px; background-color: #e6f7ff; border: 1px solid #cce7ff; color: #004085; border-radius: 4px; }
-    .info { margin-top: 15px; font-size: 0.9em; color: #666; text-align: center;}
-</style>
-<body>
-    <h1>🖼️ Agnostic Wallpaper Scraper</h1>
-    <p class="info">Scraping from **Wallhaven**, **Reddit**, and **Unsplash** for high-quality results.</p>
-    {% if message %}<div class="message">{{ message }}</div>{% endif %}
-    <form method="POST">
-        <label for="query">Enter Wallpaper Type:</label>
-        <input type="text" id="query" name="query" placeholder="e.g., Arch Linux, Initial D, Nature" required>
-        <input type="submit" value="Scrape and Download ZIP">
-    </form>
-</body>
-</html>
-"""
+            # Create the ZIP File on the server's disk
+            with zipfile.ZipFile(ZIP_FILENAME, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for root, _, files in os.walk(TEMP_FOLDER):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        # Add the file to the zip, naming it just by the file name
+                        zipf.write(file_path, arcname=file)
 
+            # Serve the ZIP file for download
+            response = send_file(
+                ZIP_FILENAME, 
+                mimetype='application/zip', 
+                as_attachment=True, 
+                download_name=ZIP_FILENAME
+            )
+            
+            return response
+            
+        except Exception as e:
+            # Handle unexpected errors and ensure cleanup
+            return f"An error occurred during scraping or zipping: {e}", 500
+            
+        finally:
+            # Ensure cleanup runs after the response has been sent
+            if os.path.exists(TEMP_FOLDER):
+                shutil.rmtree(TEMP_FOLDER)
+            if os.path.exists(ZIP_FILENAME):
+                os.remove(ZIP_FILENAME)
+                
+# Standard entry point for local testing
 if __name__ == '__main__':
-    # To run: 'pip install flask requests beautifulsoup4' and 'python app.py'
     app.run(debug=True)
