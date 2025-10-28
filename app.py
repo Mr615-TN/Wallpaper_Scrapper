@@ -5,7 +5,7 @@ import shutil
 import time
 
 # Ensure you save the code from section 1 as Agnostic_Scraper_Wallhaven.py
-from AgnosticWallpaperScraper import WallpaperDownloader 
+from AgnosticWallpaperScrapper import WallpaperDownloader 
 
 app = Flask(__name__)
 
