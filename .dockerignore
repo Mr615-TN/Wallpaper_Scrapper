@@ -1,0 +1,16 @@
+# Ignore Python virtual environment folders
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Ignore downloaded image folders and the zip files
+*Wallpapers/
+*.zip
+
+# Ignore local system files
+.DS_Store
+.vscode/
+.git
+.gitignore
