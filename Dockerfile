@@ -1,4 +1,4 @@
-# Use the newest stable lightweight official Python image (3.14-slim)
+# Use the official lightweight Python image
 FROM python:3.14-slim
 
 # Set the working directory inside the container
@@ -12,10 +12,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code into the container
 COPY . .
 
-# Expose the port the application runs on (default for Flask/Gunicorn)
+# Create temp directory for wallpaper downloads
+RUN mkdir -p /tmp/wallpapers
+
+# Expose the port (Render will override with $PORT env variable)
 EXPOSE 5000
 
-# Define the command to run the application using Gunicorn (the production WSGI server).
-# Gunicorn will listen on port 5000 inside the container.
-# Change 'app:app' if your Flask application instance is named differently or in a different file.
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# Use shell form to allow environment variable substitution
+# Render provides $PORT environment variable (usually 10000)
+# Timeout set to 120s for long wallpaper downloads
+CMD gunicorn --bind 0.0.0.0:${PORT:-5000} --timeout 120 app:app
