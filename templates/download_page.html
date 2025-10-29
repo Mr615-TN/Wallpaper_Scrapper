@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agnostic Wallpaper Scrapper</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -32,6 +32,7 @@
                     <label for="source">Source:</label>
                     <select id="source" name="source" class="select-field">
                         <option value="Reddit" {% if current_source == 'Reddit' %}selected{% endif %}>Reddit (No Key Needed)</option>
+                        <option value="Wallhaven" {% if current_source == 'Wallhaven' %}selected{% endif %}>Wallhaven (No Key Needed)</option>
                         <option value="Unsplash" {% if current_source == 'Unsplash' %}selected{% endif %}>Unsplash (No Key Needed)</option>
                         <option value="Pixabay" {% if current_source == 'Pixabay' %}selected{% endif %}>Pixabay (API Key Required)</option>
                         <option value="Pexels" {% if current_source == 'Pexels' %}selected{% endif %}>Pexels (API Key Required)</option>
