@@ -1,4 +1,3 @@
-# app.py - Updated to send ZIP file as download
 from flask import Flask, render_template, request, send_file
 from AgnosticWallpaperScrapper import WallpaperDownloader 
 import os
