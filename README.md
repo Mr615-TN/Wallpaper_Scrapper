@@ -112,7 +112,6 @@ Wallpaper_Scrapper/
 ├── AgnosticWallpaperScrapper.py    # Wallpaper scraping logic
 ├── requirements.txt                # Python dependencies
 ├── Dockerfile                      # Docker configuration
-├── render.yaml                     # Render deployment config
 ├── README.md                       # This file
 ├── templates/
 │   └── download_page.html          # Web interface
