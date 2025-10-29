@@ -3,23 +3,32 @@ import requests
 from pathlib import Path
 import time
 import re
+import tempfile
+import zipfile
+import shutil
 
 class WallpaperDownloader:
     """
     Agnostic downloader for high-quality wallpapers from free, open sources 
-    (Reddit, Unsplash, Wallhaven).
+    (Reddit, Unsplash, Wallhaven). Creates a ZIP file for download.
     """
-    def __init__(self, output_folder="AgnosticWallpapers"):
-        self.output_folder = output_folder
+    def __init__(self, temp_folder=None):
+        # Use a temporary directory that will be cleaned up
+        if temp_folder is None:
+            self.temp_folder = tempfile.mkdtemp(prefix="wallpapers_")
+        else:
+            self.temp_folder = temp_folder
+            Path(self.temp_folder).mkdir(parents=True, exist_ok=True)
+            
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         self.downloaded_count = 0
-        Path(self.output_folder).mkdir(parents=True, exist_ok=True)
+        self.downloaded_files = []
     
-    def get_output_path(self):
-        """Return the absolute path to the output folder"""
-        return os.path.abspath(self.output_folder)
+    def get_temp_folder(self):
+        """Return the path to the temporary folder"""
+        return self.temp_folder
     
     def download_image(self, url, filename_prefix, query=""):
         """Download a single image and enforce minimum quality (size)"""
@@ -37,7 +46,7 @@ class WallpaperDownloader:
                 print(f"✗ Not an image (Content-Type: {content_type})")
                 return False
             
-            filepath = os.path.join(self.output_folder, filename)
+            filepath = os.path.join(self.temp_folder, filename)
             
             file_size_bytes = 0
             with open(filepath, 'wb') as f:
@@ -53,12 +62,43 @@ class WallpaperDownloader:
                 return False
             
             self.downloaded_count += 1
+            self.downloaded_files.append(filepath)
             print(f"✓ ({file_size_kb:.0f}KB)")
             return True
             
         except Exception as e:
             print(f"✗ Error: {e}")
             return False
+
+    def create_zip(self, query):
+        """Create a ZIP file from all downloaded images"""
+        if not self.downloaded_files:
+            return None
+        
+        safe_query = re.sub(r'[^\w\-_\. ]', '', query).replace(' ', '_')
+        zip_filename = f"{safe_query}_wallpapers.zip"
+        zip_path = os.path.join(self.temp_folder, zip_filename)
+        
+        try:
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for file_path in self.downloaded_files:
+                    # Add file to zip with just the filename (no path)
+                    zipf.write(file_path, os.path.basename(file_path))
+            
+            print(f"✓ Created ZIP: {zip_filename}")
+            return zip_path
+        except Exception as e:
+            print(f"✗ Error creating ZIP: {e}")
+            return None
+    
+    def cleanup(self):
+        """Clean up temporary files and folder"""
+        try:
+            if os.path.exists(self.temp_folder):
+                shutil.rmtree(self.temp_folder)
+                print(f"✓ Cleaned up temporary files")
+        except Exception as e:
+            print(f"⚠️ Could not clean up temp folder: {e}")
 
     def search_wallhaven(self, query, limit=10):
         """Scrape Wallhaven using its search endpoint and high-res filter."""
@@ -180,19 +220,25 @@ def main_scraper_cli():
         print("Search term cannot be empty. Exiting.")
         return
         
-    downloader = WallpaperDownloader(f"{search_term}_Wallpapers")
+    downloader = WallpaperDownloader()
 
     # Run Scrapers
     downloader.search_wallhaven(search_term, limit=10)
     downloader.search_reddit(search_term, limit=10)
     downloader.search_unsplash(search_term, limit=5)
     
+    # Create ZIP
+    zip_path = downloader.create_zip(search_term)
+    
     # Summary
     print(f"\n{'='*60}")
     print(f"🎉 Download Complete!")
     print(f"✓ Total images downloaded: **{downloader.downloaded_count}**")
-    print(f"✓ Location: **{downloader.get_output_path()}**")
+    if zip_path:
+        print(f"✓ ZIP file: **{zip_path}**")
     print(f"{'='*60}\n")
+    
+    # Note: In CLI mode, we don't cleanup so user can access the ZIP
     
 
 if __name__ == "__main__":

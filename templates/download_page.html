@@ -3,55 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agnostic Wallpaper Scrapper</title>
+    <title>Agnostic Wallpaper Scraper</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         
-        <h1 class="title">Agnostic Wallpaper Scrapper 🖼️</h1>
-        <p class="subtitle">Select your query, image count, and source to begin.</p>
+        <h1 class="title">Agnostic Wallpaper Scraper 🖼️</h1>
+        <p class="subtitle">Download high-quality wallpapers as a ZIP file</p>
         
         <div class="card">
-            <form method="POST" action="/download">
+            <form method="POST" action="/download" id="downloadForm">
                 
                 <div class="input-group">
                     <label for="query">Search Term:</label>
                     <input type="text" id="query" name="query" 
-                           value="{{ current_query | default('AE86') }}" required>
+                           value="{{ current_query | default('AE86') }}" 
+                           placeholder="e.g., Initial D, Cyberpunk, Nature"
+                           required>
                 </div>
 
                 <div class="input-group">
-                    <label for="count">Images to Download (max 50 per run):</label>
+                    <label for="count">Images to Download (max 50):</label>
                     <input type="number" id="count" name="count" 
-                           value="{{ current_count | default(10) }}" min="1" max="50">
+                           value="{{ current_count | default(10) }}" 
+                           min="1" max="50">
                 </div>
 
                 <div class="input-group">
                     <label for="source">Source:</label>
                     <select id="source" name="source" class="select-field">
                         <option value="Reddit" {% if current_source == 'Reddit' %}selected{% endif %}>Reddit (No Key Needed)</option>
-                        <option value="Wallhaven" {% if current_source == 'Wallhaven' %}selected{% endif %}>Wallhaven (No Key Needed)</option>
                         <option value="Unsplash" {% if current_source == 'Unsplash' %}selected{% endif %}>Unsplash (No Key Needed)</option>
+                        <option value="Wallhaven" {% if current_source == 'Wallhaven' %}selected{% endif %}>Wallhaven (No Key Needed)</option>
                         <option value="Pixabay" {% if current_source == 'Pixabay' %}selected{% endif %}>Pixabay (API Key Required)</option>
                         <option value="Pexels" {% if current_source == 'Pexels' %}selected{% endif %}>Pexels (API Key Required)</option>
                     </select>
                 </div>
 
-                <button type="submit" class="button-primary">
-                    Start Wallpaper Download 🚀
+                <button type="submit" class="button-primary" id="downloadBtn">
+                    <span id="btnText">Start Download 🚀</span>
+                    <span id="btnLoading" style="display: none;">Downloading... ⏳</span>
                 </button>
             </form>
         </div>
 
         <div class="log-area">
             <h2>Status:</h2>
-            <p>{{ status_message | default('Ready to begin...') }}</p>
-            {% if output_folder %}
-                <p>Output Path: <code class="filepath">{{ output_folder }}</code></p>
-            {% endif %}
+            <p id="statusMessage">{{ status_message | default('Ready to begin...') | safe }}</p>
+            <p class="info-text">💡 Your wallpapers will download as a ZIP file to your Downloads folder</p>
         </div>
     </div>
+
+    <script>
+        // Show loading state when form is submitted
+        document.getElementById('downloadForm').addEventListener('submit', function() {
+            const btn = document.getElementById('downloadBtn');
+            const btnText = document.getElementById('btnText');
+            const btnLoading = document.getElementById('btnLoading');
+            const statusMsg = document.getElementById('statusMessage');
+            
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'inline';
+            statusMsg.textContent = 'Searching for wallpapers... This may take 30-60 seconds ⏳';
+        });
+    </script>
 </body>
 </html>
